@@ -1,0 +1,19 @@
+ESTUDIO MUSICAL – TOLEDO-APPSTUDIO v4
+
+Esta versión añade instalación como aplicación (PWA) a la v3.
+No se han modificado las funciones del metrónomo ni del visor.
+
+PUBLICACIÓN EN GITHUB PAGES
+1. Descomprime el ZIP.
+2. Sube TODO el contenido de esta carpeta al repositorio, manteniendo la carpeta icons.
+3. Comprueba que index.html, manifest.json y service-worker.js quedan en la misma carpeta raíz del sitio.
+4. Activa GitHub Pages si todavía no está activado.
+5. Abre la dirección HTTPS de GitHub Pages en Chrome para Android.
+6. Espera unos segundos y busca en el menú ⋮ la opción «Instalar aplicación» o «Añadir a pantalla de inicio».
+
+IMPORTANTE
+- No abras index.html como archivo local para instalarla: debe abrirse desde la dirección HTTPS de GitHub Pages.
+- Si ya habías instalado una versión anterior, desinstálala y vuelve a abrir la web.
+- El historial de partituras sigue guardándose localmente en el navegador/dispositivo.
+- La visualización de PDF utiliza PDF.js desde CDN, por lo que necesita conexión a Internet para cargar esa librería.
+- El service worker guarda los archivos principales de la aplicación para facilitar la carga posterior sin conexión.

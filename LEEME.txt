@@ -1,0 +1,12 @@
+ESTUDIO MUSICAL – v12 Diseño adaptable
+
+MEJORA VISUAL:
+- En tablet vertical y móvil: partitura primero y controles debajo.
+- En tablet horizontal: partitura amplia a la izquierda y controles en una columna lateral a la derecha.
+- En horizontal, la columna de controles puede desplazarse sin mover la partitura.
+- En pantallas pequeñas, botones táctiles y visor adaptados.
+- Se conservan las funciones de la v11: metrónomo, afinador, progreso, partituras y anotaciones mediante dibujo.
+
+INSTALACIÓN:
+Sube TODO el contenido de esta carpeta a la raíz del repositorio GitHub Pages, sustituyendo los archivos anteriores. Conserva la carpeta icons.
+Después recarga la aplicación. Si aparece la versión antigua, cierra la PWA y vuelve a abrirla para que se actualice la caché.

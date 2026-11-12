@@ -1,0 +1,828 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=3,user-scalable=yes,viewport-fit=cover">
+<meta name="theme-color" content="#eff8f8">
+<meta name="description" content="Estudio Musical: partituras y metrónomo visual y sonoro.">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Estudio Musical · Toledo-AppStudio</title>
+<style>
+:root{--navy:#172b4d;--gold:#efb84e;--bg:#f2f4f7;--ink:#202a39;--muted:#687589}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px system-ui,-apple-system,Segoe UI,sans-serif}
+header{background:var(--navy);color:white;padding:13px 16px;font-weight:800;font-size:19px}
+main{max-width:1100px;margin:auto;padding:12px;display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:12px}
+.card{background:white;border:1px solid #dce2ea;border-radius:16px;padding:13px;min-width:0;box-shadow:0 2px 8px #172b4d0a}
+h2{font-size:16px;margin:0 0 10px;color:var(--navy)}
+.toolbar,.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+button,.filelabel,select{border:0;border-radius:10px;padding:11px 13px;font:600 14px system-ui;background:#e9eef5;color:var(--navy)}
+button.primary{background:var(--navy);color:white}button:disabled{opacity:.4}
+.filelabel{display:inline-block;cursor:pointer;background:var(--navy);color:white}input[type=file]{display:none}
+
+.score-side-strip{position:absolute;top:0;bottom:0;width:10px;background:#080a0e;z-index:5;opacity:.28;pointer-events:none;transition:opacity .035s,box-shadow .035s}
+.score-side-strip.left{left:0;border-radius:10px 0 0 10px}
+.score-side-strip.right{right:0;border-radius:0 10px 10px 0}
+.score-side-strip.flash{opacity:1;box-shadow:0 0 12px 3px #080a0e88}
+.score-side-strip.subflash{opacity:.62}
+.viewer{position:relative;background:#e8edf3;border-radius:12px;min-height:55vh;display:flex;justify-content:center;align-items:center;overflow:hidden;touch-action:pan-y;isolation:isolate}
+#pdfCanvas{display:none;max-width:100%;height:auto;background:white;transform-origin:center center}
+#photo{display:none;max-width:100%;max-height:75vh;object-fit:contain;transform-origin:center center}
+#empty{text-align:center;color:var(--muted);padding:40px 16px}
+.pagebar{display:flex;justify-content:space-between;color:var(--muted);font-size:13px;margin-top:9px;gap:8px}
+input[type=range]{width:100%;accent-color:var(--navy)}
+label{display:block;font-size:13px;color:var(--muted);margin:10px 0 5px}
+.tempo{font-size:42px;font-weight:850;line-height:1.1;font-variant-numeric:tabular-nums;color:var(--navy)}
+.beat-dots{display:flex;justify-content:center;gap:10px;margin-top:10px}
+.beat-dots i{width:12px;height:12px;border-radius:50%;background:#697383}
+.beat-dots i.current{background:#fff2c9;box-shadow:0 0 0 4px #efb84e45}
+
+.metro-toolbar{display:flex;align-items:center;gap:12px;background:#f0f2f5;border-radius:14px;padding:12px;margin:10px 0}
+.metro-play{width:52px;height:48px;border-radius:12px;background:#172b4d;color:white;font-size:20px;padding:0;flex:0 0 auto}
+.metro-play.pulse{background:#efb84e;color:#172b4d;transform:scale(1.06)}
+.metro-tempo{display:flex;align-items:baseline;gap:5px;min-width:80px}
+.metro-tempo strong{font-size:34px;line-height:1;font-weight:850;color:#172b4d;font-variant-numeric:tabular-nums}
+.metro-tempo small{font-size:12px;color:#687589}
+.metro-beat{display:flex;align-items:center;gap:5px;flex:1;justify-content:flex-end}
+.metro-beat i{display:block;width:9px;height:28px;border-radius:5px;background:#c6ced9;transition:background .05s,transform .05s}
+.metro-beat i.active{background:#172b4d;transform:scaleY(1.35)}
+.metro-beat i.accent{background:#efb84e;transform:scaleY(1.55)}
+.status{font-size:12px;color:var(--muted);min-height:18px;margin-top:8px}
+.tuner-card{margin-top:16px;padding:13px;border:1px solid #d9eceb;border-radius:14px;background:linear-gradient(145deg,#f5fbfa,#f1f8fc)}
+.tuner-readout{display:flex;align-items:center;justify-content:center;gap:12px;margin:12px 0}
+.tuner-note{font-size:48px;line-height:1;font-weight:850;color:var(--navy);min-width:76px;text-align:center}
+.tuner-meta{font-size:13px;color:var(--muted);line-height:1.6}
+.tuner-meter{height:12px;border-radius:20px;background:linear-gradient(90deg,#e8b7a8 0%,#f1d9a0 35%,#8bcdb9 50%,#f1d9a0 65%,#e8b7a8 100%);position:relative;margin:12px 4px 6px}
+.tuner-needle{position:absolute;top:-5px;left:50%;width:4px;height:22px;border-radius:4px;background:#254d59;transform:translateX(-50%);transition:left .08s}
+.tuner-cents{text-align:center;font-size:13px;font-weight:700;color:var(--navy);min-height:20px}
+.tuner-hint{font-size:12px;color:var(--muted);text-align:center;min-height:18px;margin-top:7px}
+.study-timer{font-size:34px;font-weight:850;text-align:center;color:var(--navy);font-variant-numeric:tabular-nums;margin:10px 0}
+.study-summary{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+.study-stat{background:#f1f8f8;border-radius:10px;padding:9px;text-align:center}
+.study-stat strong{display:block;font-size:20px;color:var(--navy)}
+.study-stat small{font-size:11px;color:var(--muted)}
+.study-history{max-height:220px;overflow:auto;padding:0;margin:10px 0;list-style:none}
+.study-history li{border-top:1px solid #e3eeee;padding:9px 2px;font-size:12px;line-height:1.5}
+.study-history b{color:var(--navy)}
+.study-actions{display:flex;gap:7px;flex-wrap:wrap}
+.study-actions button{flex:1}
+
+
+@media(max-width:760px){main{grid-template-columns:1fr;padding:8px}.viewer{min-height:52vh}.card{padding:11px}.beat-orb{width:112px;height:112px}}
+
+:root{
+ --navy:#397f91;--gold:#63b9b1;--bg:#eff8f8;--ink:#38515b;--muted:#78939b;
+ --lav:#e4f3f3;--mint:#dff2ec;--peach:#e5f2fa;--blue:#dff0fa
+}
+body{background:linear-gradient(135deg,#eff9f7 0%,#eef7fb 55%,#eaf6f5 100%);color:var(--ink)}
+header{background:rgba(255,255,255,.88);color:var(--navy);padding:11px 16px;border-bottom:1px solid #d9eceb;box-shadow:0 3px 14px #68758a0c}
+.brandline{max-width:1100px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brandname{display:flex;align-items:center;gap:10px;font-weight:800;font-size:19px}
+.brandmark{width:36px;height:36px;border-radius:13px;background:linear-gradient(145deg,#cceee8,#d5edfa);display:grid;place-items:center;color:#397f91;font-size:22px}
+.brandcredit{font-size:10px;font-weight:500;letter-spacing:.02em;color:#9995a4;text-align:right;line-height:1.35}
+.brandcredit strong{display:block;color:#77788c;font-size:11px;font-weight:700}
+.card{background:rgba(255,255,255,.91);border:1px solid #d9eceb;border-radius:20px;box-shadow:0 9px 28px #77849a12}
+h2{color:#68778f}
+button,.filelabel,select{background:#eeeaf4;color:#65738b;border:1px solid #d8e9ec}
+button.primary,.filelabel{background:#4c91a6;color:white;border-color:#4c91a6}
+button:active,.filelabel:active{transform:scale(.98)}
+.viewer{background:#eaf5f5;border:1px solid #d8e9ec;border-radius:16px}
+#empty{color:#8c8b9b}
+.metro-toolbar{background:linear-gradient(110deg,#dff3ef,#e1f1fa);border:1px solid #d8ecea;border-radius:15px}
+.metro-play{background:#74849d;color:white}
+.metro-play.pulse{background:#63b9b1;color:#fff}
+.metro-tempo strong{color:#397f91}
+.metro-beat i{background:#d6d2dc}
+.metro-beat i.active{background:#4c91a6}
+.metro-beat i.accent{background:#63b9b1}
+.beat-dots i{background:#d8d5df}
+.beat-dots i.current{background:#63b9b1;box-shadow:0 0 0 4px #63b9b135}
+input[type=range]{accent-color:#4c9d9b}
+.status,.pagebar{color:#8b8c9b}
+.score-side-strip{background:#25242a;opacity:.2}
+.score-side-strip.flash{opacity:1;box-shadow:0 0 13px 3px #25242a55}
+.score-side-strip.subflash{opacity:.58}
+@media(max-width:760px){
+ main{gap:10px}
+ .brandname{font-size:17px}
+ .brandmark{width:32px;height:32px}
+ .brandcredit{font-size:9px}
+ .brandcredit strong{font-size:10px}
+}
+
+
+.history-panel{margin-top:14px;padding:12px;border:1px solid #dceceb;border-radius:14px;background:linear-gradient(120deg,#f4fbfa,#f2f9fc)}
+.history-heading{display:flex;justify-content:space-between;align-items:center;gap:8px;color:#397f91;font-size:13px;margin-bottom:8px}
+.history-clear{padding:6px 9px;font-size:11px;background:#e4f1f3;color:#527d8b;border:0}
+.history-list{display:flex;flex-direction:column;gap:6px}
+.history-empty{font-size:12px;color:#8aa0a6}
+.history-item{display:flex;align-items:center;gap:8px;padding:8px 9px;border-radius:10px;background:#fff;border:1px solid #e2eeee}
+.history-open{flex:1;text-align:left;background:transparent;border:0;padding:3px;color:#426c7b;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.history-meta{font-size:10px;color:#92a4a8;white-space:nowrap}
+.history-remove{padding:5px 8px;background:#eef6f6;color:#718d94;font-size:12px}
+
+
+.tap-row{display:flex;gap:7px;align-items:center;margin:9px 0}
+.tap-button{flex:1;background:#e0f1ef;color:#397f91;border:1px solid #cde6e3}
+.tap-hint{font-size:11px;color:#8b9da2;min-width:78px;text-align:right}
+.progress-box{margin-top:12px;padding:11px;border:1px solid #d9eceb;border-radius:13px;background:#f4fbfa}
+.progress-title{font-size:13px;font-weight:750;color:#397f91;margin-bottom:7px}
+.progress-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.progress-grid label{margin:4px 0 3px}
+.progress-grid select,.progress-grid input{width:100%;min-width:0}
+.progress-check{display:flex;align-items:center;gap:7px;font-size:13px;color:#647b83;margin-top:8px}
+
+
+/* Modo ensayo: vista despejada y barra flotante */
+#rehearsalBar{display:none}
+#rehearsalBtn{background:#dff2ec;color:#397f91;border:1px solid #cde6e3}
+#appMain:fullscreen{background:#eff8f8;padding:12px;box-sizing:border-box;display:block;overflow:auto}
+#appMain:fullscreen>section.card{height:calc(100dvh - 24px);min-height:0;display:flex;flex-direction:column;box-sizing:border-box;padding:12px}
+#appMain:fullscreen>section.card>h2{display:none}
+#appMain:fullscreen .toolbar,
+#appMain:fullscreen .pagebar,
+#appMain:fullscreen .history-panel,
+#appMain:fullscreen .status,
+#appMain:fullscreen>aside{display:none!important}
+#appMain:fullscreen .viewer{flex:1;min-height:0;height:calc(100dvh - 70px);max-height:none}
+#appMain:fullscreen #pdfCanvas{max-height:100%;width:auto;object-fit:contain}
+#appMain:fullscreen #photo{max-height:100%;max-width:100%}
+#appMain:fullscreen #rehearsalBar{display:flex;position:fixed;z-index:30;left:50%;bottom:max(12px,env(safe-area-inset-bottom));transform:translateX(-50%);align-items:center;gap:8px;padding:7px 10px;background:#ffffffed;border:1px solid #d9eceb;border-radius:16px;box-shadow:0 4px 20px #203b4930;backdrop-filter:blur(8px)}
+#rehearsalBar button{min-width:38px;min-height:38px;padding:6px 10px;background:#e0f1ef;color:#397f91;border-radius:10px;font-size:18px}
+#rehearsalBar #rehearsalPlay{background:#397f91;color:white}
+#rehearsalPage{font-size:12px;color:#526f79;white-space:nowrap;min-width:68px;text-align:center}
+@media (max-width:600px){
+ #appMain:fullscreen{padding:5px}
+ #appMain:fullscreen>section.card{height:calc(100dvh - 10px);padding:6px}
+ #appMain:fullscreen .viewer{height:calc(100dvh - 60px)}
+ #appMain:fullscreen #rehearsalBar{gap:5px;padding:5px 7px}
+ #rehearsalBar button{min-width:34px;min-height:34px}
+}
+
+
+.annotation-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px;margin:7px 0;background:#f2faf8;border:1px solid #d9eceb;border-radius:11px}
+.annotation-tools[hidden]{display:none}
+.annotation-tools label{display:inline;margin:0;font-size:12px}
+.annotation-tools input[type=color]{width:36px;height:32px;padding:1px;border:0;background:transparent}
+.annotation-tools button{font-size:12px;padding:7px 10px;background:#e0f1ef;color:#397f91}
+#inkCanvas{position:absolute;inset:0;width:100%;height:100%;z-index:9;pointer-events:none;touch-action:none}
+#inkCanvas.active{pointer-events:auto;cursor:crosshair}
+
+
+/* v12: distribución adaptable según orientación */
+#appMain{align-items:start;gap:14px}
+#appMain>section.card{min-width:0}
+#appMain>aside.card{min-width:0}
+
+/* Tablet y móvil en vertical: primero la partitura, después los controles */
+@media (orientation:portrait){
+  #appMain{grid-template-columns:minmax(0,1fr);max-width:900px}
+  #appMain>section.card{order:1}
+  #appMain>aside.card{order:2}
+  #appMain .viewer{min-height:48vh;max-height:68vh}
+  #appMain>aside.card{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start}
+  #appMain>aside.card>h2,
+  #appMain>aside.card>.metro-toolbar,
+  #appMain>aside.card>#dots,
+  #appMain>aside.card>.progress-box,
+  #appMain>aside.card>#status{grid-column:1/-1}
+  #appMain>aside.card>.tuner-card{margin-top:0}
+}
+
+/* Tablet en horizontal: partitura amplia y controles en una columna lateral */
+@media (orientation:landscape) and (min-width:761px){
+  #appMain{grid-template-columns:minmax(0,7fr) minmax(270px,3fr);max-width:1500px}
+  #appMain>section.card{order:1}
+  #appMain>aside.card{order:2;position:sticky;top:10px;max-height:calc(100dvh - 20px);overflow-y:auto;overscroll-behavior:contain}
+  #appMain .viewer{min-height:66vh;max-height:calc(100dvh - 230px)}
+  #appMain>aside.card .tuner-card{padding:10px}
+  #appMain>aside.card .study-history{max-height:130px}
+}
+
+/* Teléfonos: controles apilados y botones cómodos al tacto */
+@media (max-width:760px){
+  #appMain{grid-template-columns:minmax(0,1fr);padding:8px;gap:10px}
+  #appMain>aside.card{display:block}
+  #appMain>aside.card>.tuner-card{margin-top:14px}
+  #appMain .viewer{min-height:48vh;max-height:65vh}
+  #appMain .toolbar button,#appMain .toolbar .filelabel{min-height:42px}
+}
+
+/* Tablet vertical: la partitura conserva el protagonismo */
+@media (orientation:portrait) and (min-width:761px){
+  #appMain .viewer{min-height:54vh;max-height:66vh}
+  #appMain>aside.card{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #appMain>aside.card>h2{margin-bottom:0}
+}
+
+/* Evita que el contenido lateral quede comprimido al girar el dispositivo */
+@media (orientation:landscape) and (max-height:600px){
+  #appMain .viewer{min-height:58vh;max-height:calc(100dvh - 180px)}
+  header{padding-top:7px;padding-bottom:7px}
+  #appMain>aside.card{padding:9px}
+}
+
+</style>
+</head>
+<body>
+<header>
+      <div class="brandline">
+        <div class="brandname"><span class="brandmark">♫</span><span>Estudio Musical</span></div>
+        <div class="brandcredit">Creado por <strong>Toledo-AppStudio by P.Fdez</strong></div>
+      </div>
+    </header>
+
+<main id="appMain">
+<div id="rehearsalBar" aria-label="Controles del modo ensayo">
+<button id="rehearsalPrev" type="button" aria-label="Página anterior">‹</button>
+<button id="rehearsalPlay" type="button" aria-label="Iniciar o parar metrónomo">▶</button>
+<span id="rehearsalPage">Partitura</span>
+<button id="rehearsalNext" type="button" aria-label="Página siguiente">›</button>
+<button id="rehearsalExit" type="button" aria-label="Salir del modo ensayo">✕</button>
+</div>
+<section class="card">
+<h2>Mi partitura</h2>
+<div class="toolbar">
+<label class="filelabel" for="pdfFile">Cargar PDF</label><input id="pdfFile" type="file" accept="application/pdf">
+<label class="filelabel" for="imgFile">Cargar foto</label><input id="imgFile" type="file" accept="image/*">
+<button id="prev" disabled>‹</button><button id="next" disabled>›</button>
+<button id="zoomOut">−</button><span id="zoomPct" style="font-size:13px;color:#687589;min-width:34px;text-align:center">115%</span><button id="zoomIn">+</button><button id="fullScreen" title="Pantalla completa del visor">⛶</button><button id="rehearsalBtn" type="button">Modo ensayo</button><button id="annotateBtn" type="button">✎ Anotar</button>
+</div>
+<div class="annotation-tools" id="annotationTools" hidden><label for="inkColor">Color</label><input id="inkColor" type="color" value="#e53935" aria-label="Color del trazo"><button id="undoInk" type="button">Deshacer</button><button id="clearInk" type="button">Borrar página</button><button id="doneInk" type="button">Listo</button></div>
+<div class="viewer" id="viewer">
+<div class="score-side-strip left" id="leftStrip"></div><div class="score-side-strip right" id="rightStrip"></div>
+<div id="empty">𝄞<br><b>Carga una partitura para empezar</b><br>PDF o fotografía</div>
+<canvas id="pdfCanvas"></canvas><img id="photo" alt="Partitura"><canvas id="inkCanvas" aria-label="Anotaciones de la partitura"></canvas>
+</div>
+<div class="pagebar"><span id="filename">Ningún archivo cargado</span><span id="pageinfo"></span></div>
+<div class="history-panel" id="historyPanel">
+  <div class="history-heading"><strong>Partituras recientes</strong><button id="clearHistory" class="history-clear" type="button">Borrar historial</button></div>
+  <div id="historyList" class="history-list"><span class="history-empty">Todavía no has cargado partituras.</span></div>
+</div>
+<div class="status">Toca el lado izquierdo o derecho de la partitura para cambiar de página. También puedes deslizar.</div>
+</section>
+<aside class="card">
+<h2>Metrónomo</h2>
+<div class="metro-toolbar">
+<button id="toggle" class="metro-play" aria-label="Iniciar metrónomo">▶</button>
+<div class="metro-tempo"><strong id="bpmValue">80</strong><small>BPM</small></div>
+<div class="metro-beat" id="metroBeat" aria-label="Indicador visual del pulso"><i></i><i></i><i></i><i></i></div>
+</div>
+<div class="beat-dots" id="dots"></div>
+<label>Modo de metrónomo</label>
+<select id="metroMode" style="width:100%">
+<option value="both" selected>Sonido + indicador visual</option>
+<option value="sound">Solo sonido</option>
+<option value="visual">Solo indicador visual</option>
+</select>
+<label>Velocidad</label><input id="bpm" type="range" min="30" max="240" value="80">
+<div class="controls"><button id="minus">− 5</button><button id="plus">+ 5</button></div>
+<div class="tap-row">
+  <button id="tapTempo" class="tap-button" type="button">⌁ Tap Tempo</button>
+  <span id="tapHint" class="tap-hint">Toca varias veces</span>
+</div>
+<div class="progress-box">
+  <div class="progress-title">Velocidad progresiva</div>
+  <label class="progress-check"><input id="progressEnabled" type="checkbox"> Aumentar velocidad automáticamente</label>
+  <div class="progress-grid">
+    <div><label for="progressStep">Aumentar</label><select id="progressStep"><option value="1">+1 BPM</option><option value="2" selected>+2 BPM</option><option value="5">+5 BPM</option></select></div>
+    <div><label for="progressBars">Cada</label><select id="progressBars"><option value="1">1 compás</option><option value="2" selected>2 compases</option><option value="4">4 compases</option><option value="8">8 compases</option></select></div>
+    <div><label for="progressTarget">Velocidad máxima</label><input id="progressTarget" type="number" min="30" max="240" value="120" inputmode="numeric" style="padding:10px;border:1px solid #d8e9ec;border-radius:10px;color:#526f79"></div>
+    <div><label>Compases transcurridos</label><div id="progressCount" style="padding:10px;color:#526f79;font-size:13px">0</div></div>
+  </div>
+</div>
+
+<label>Compás</label><select id="meter" style="width:100%">
+<option value="2">2/4</option><option value="3">3/4</option><option value="4" selected>4/4</option><option value="5">5/4</option><option value="6">6/4</option><option value="7">7/4</option><option value="6e">6/8 (2 pulsos)</option><option value="9e">9/8 (3 pulsos)</option><option value="12e">12/8 (4 pulsos)</option>
+</select>
+<label>Subdivisión</label><select id="subdivision" style="width:100%">
+<option value="1">Negras · sin subdivisión</option><option value="2" selected>Corcheas · 2 por pulso</option><option value="4">Semicorcheas · 4 por pulso</option><option value="3">Tresillos · 3 por pulso</option>
+</select>
+<label style="display:flex;align-items:center;gap:8px"><input id="accent" type="checkbox" checked> Acentuar primer tiempo</label>
+<div class="status" id="status">El primer pulso de cada compás tiene un acento más fuerte. Cambiar el compás reinicia el conteo.</div>
+
+<div class="tuner-card" id="tunerCard">
+  <h2>Afinador cromático</h2>
+  <button id="tunerToggle" class="primary" type="button" style="width:100%">🎙 Activar afinador</button>
+  <div class="tuner-readout">
+    <div class="tuner-note" id="tunerNote">—</div>
+    <div class="tuner-meta"><div id="tunerFrequency">— Hz</div><div id="tunerOctave">Escuchando…</div></div>
+  </div>
+  <div class="tuner-meter"><div class="tuner-needle" id="tunerNeedle"></div></div>
+  <div class="tuner-cents" id="tunerCents">Centra la aguja para afinar</div>
+  <div class="tuner-hint" id="tunerHint">Usa el micrófono del dispositivo. Necesita permiso de acceso.</div>
+</div>
+
+<div class="tuner-card" id="studyProgress">
+  <h2>Mi progreso</h2>
+  <div class="study-timer" id="studyTimer">00:00:00</div>
+  <div class="study-actions">
+    <button id="studyStart" class="primary" type="button">▶ Iniciar sesión</button>
+    <button id="studyStop" type="button" disabled>■ Finalizar</button>
+  </div>
+  <label for="studyNote">Qué vas a practicar (opcional)</label>
+  <input id="studyNote" type="text" maxlength="100" placeholder="Ej. Churumbelerías" style="width:100%;padding:10px;border:1px solid #cbdedc;border-radius:9px">
+  <div class="study-summary">
+    <div class="study-stat"><strong id="studyTotal">0 min</strong><small>Tiempo acumulado</small></div>
+    <div class="study-stat"><strong id="studySessions">0</strong><small>Sesiones</small></div>
+  </div>
+  <div style="font-size:13px;font-weight:700;color:var(--navy)">Últimas sesiones</div>
+  <ul class="study-history" id="studyHistory"><li>Aún no hay sesiones registradas.</li></ul>
+  <button id="studyClear" type="button" style="width:100%">Borrar historial de estudio</button>
+  <div class="tuner-hint">El registro se guarda en este dispositivo.</div>
+</div>
+</aside>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+(()=> {
+const $=id=>document.getElementById(id);
+const canvas=$('pdfCanvas'),ctx=canvas.getContext('2d'),viewer=$('viewer');
+let pdf=null,page=1,scale=1.15,photoUrl=null;
+const inkCanvas=$('inkCanvas'),inkCtx=inkCanvas.getContext('2d');
+let inkEnabled=false,inkStrokes=[],inkCurrent=null;
+function annotationStorageKey(){
+ const name=$('filename').textContent||'partitura';
+ return 'estudio-musical-anotaciones:'+name+':'+page;
+}
+function resizeInkCanvas(){
+ const r=viewer.getBoundingClientRect(),dpr=window.devicePixelRatio||1;
+ inkCanvas.width=Math.max(1,Math.round(r.width*dpr));
+ inkCanvas.height=Math.max(1,Math.round(r.height*dpr));
+ inkCtx.setTransform(dpr,0,0,dpr,0,0);
+ drawInk();
+}
+function drawInk(){
+ const r=viewer.getBoundingClientRect();
+ inkCtx.clearRect(0,0,r.width,r.height);
+ for(const stroke of inkStrokes){
+  if(!stroke.points.length)continue;
+  inkCtx.beginPath();inkCtx.strokeStyle=stroke.color;inkCtx.lineWidth=stroke.width;
+  inkCtx.lineCap='round';inkCtx.lineJoin='round';
+  stroke.points.forEach((pt,i)=>{
+   const x=pt.x*r.width,y=pt.y*r.height;
+   if(i===0)inkCtx.moveTo(x,y);else inkCtx.lineTo(x,y);
+  });
+  if(stroke.points.length===1){
+   const pt=stroke.points[0];inkCtx.lineTo(pt.x*r.width+.2,pt.y*r.height+.2);
+  }
+  inkCtx.stroke();
+ }
+}
+function saveInk(){
+ try{localStorage.setItem(annotationStorageKey(),JSON.stringify(inkStrokes));}
+ catch(e){$('status').textContent='No se pudieron guardar las anotaciones en este dispositivo.';}
+}
+function loadInk(){
+ try{inkStrokes=JSON.parse(localStorage.getItem(annotationStorageKey())||'[]');}
+ catch(e){inkStrokes=[];}
+ resizeInkCanvas();
+}
+function setAnnotationMode(enabled){
+ inkEnabled=enabled;
+ inkCanvas.classList.toggle('active',enabled);
+ $('annotationTools').hidden=!enabled;
+ $('annotateBtn').textContent=enabled?'✎ Dibujando…':'✎ Anotar';
+ $('status').textContent=enabled?'Dibuja directamente sobre la partitura con el dedo o un lápiz táctil.':'';
+}
+$('annotateBtn').addEventListener('click',()=>setAnnotationMode(!inkEnabled));
+$('doneInk').addEventListener('click',()=>setAnnotationMode(false));
+$('undoInk').addEventListener('click',()=>{inkStrokes.pop();drawInk();saveInk();});
+$('clearInk').addEventListener('click',()=>{
+ if(confirm('¿Borrar todas las anotaciones de esta página?')){
+  inkStrokes=[];drawInk();saveInk();
+ }
+});
+inkCanvas.addEventListener('pointerdown',e=>{
+ if(!inkEnabled)return;
+ e.preventDefault();inkCanvas.setPointerCapture(e.pointerId);
+ const r=inkCanvas.getBoundingClientRect();
+ inkCurrent={color:$('inkColor').value,width:3,points:[{x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height}]};
+ inkStrokes.push(inkCurrent);drawInk();
+});
+inkCanvas.addEventListener('pointermove',e=>{
+ if(!inkEnabled||!inkCurrent)return;
+ const r=inkCanvas.getBoundingClientRect();
+ inkCurrent.points.push({x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height});
+ drawInk();
+});
+function finishInk(){if(inkCurrent){inkCurrent=null;saveInk();}}
+inkCanvas.addEventListener('pointerup',finishInk);
+inkCanvas.addEventListener('pointercancel',finishInk);
+window.addEventListener('resize',resizeInkCanvas);
+
+if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+function updateZoomLabel(){ $('zoomPct').textContent=Math.round(scale*100)+'%'; }
+function renderPage(){
+ if(!pdf)return;
+ pdf.getPage(page).then(p=>{const v=p.getViewport({scale});canvas.width=v.width;canvas.height=v.height;return p.render({canvasContext:ctx,viewport:v}).promise}).then(()=>{
+ canvas.style.display='block';$('photo').style.display='none';$('empty').style.display='none';updateZoomLabel();
+ $('pageinfo').textContent=`Página ${page} de ${pdf.numPages}`;if($('rehearsalPage'))updateRehearsalBar();loadInk();$('prev').disabled=page===1;$('next').disabled=page===pdf.numPages;
+ }).catch(()=>$('status').textContent='No se pudo mostrar esta página.');
+}
+
+// Historial local de partituras: guarda los archivos en IndexedDB del navegador.
+const DB_NAME='estudio-musical-db', DB_STORE='scores';
+function openHistoryDB(){
+ return new Promise((resolve,reject)=>{
+  const req=indexedDB.open(DB_NAME,1);
+  req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains(DB_STORE))db.createObjectStore(DB_STORE,{keyPath:'id',autoIncrement:true})};
+  req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
+ });
+}
+async function historySave(file,kind){
+ try{
+  const db=await openHistoryDB();
+  await new Promise((resolve,reject)=>{
+   const tx=db.transaction(DB_STORE,'readwrite');
+   tx.objectStore(DB_STORE).add({name:file.name,type:file.type,kind,blob:file,addedAt:Date.now()});
+   tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);
+  });
+  db.close();renderHistory();
+ }catch(err){$('status').textContent='No se pudo guardar el historial en este navegador.'}
+}
+async function historyAll(){
+ const db=await openHistoryDB();
+ const rows=await new Promise((resolve,reject)=>{
+  const req=db.transaction(DB_STORE,'readonly').objectStore(DB_STORE).getAll();
+  req.onsuccess=()=>resolve(req.result||[]);req.onerror=()=>reject(req.error);
+ });
+ db.close();return rows.sort((a,b)=>b.addedAt-a.addedAt);
+}
+async function renderHistory(){
+ try{
+  const rows=await historyAll(),list=$('historyList');list.innerHTML='';
+  if(!rows.length){list.innerHTML='<span class="history-empty">Todavía no has cargado partituras.</span>';return}
+  rows.slice(0,12).forEach(row=>{
+   const item=document.createElement('div');item.className='history-item';
+   const open=document.createElement('button');open.className='history-open';open.type='button';open.textContent=(row.kind==='pdf'?'▤ ':'♫ ')+row.name;
+   open.onclick=()=>restoreHistory(row.id);
+   const meta=document.createElement('span');meta.className='history-meta';meta.textContent=new Date(row.addedAt).toLocaleDateString('es-ES');
+   const remove=document.createElement('button');remove.className='history-remove';remove.type='button';remove.textContent='×';remove.title='Eliminar del historial';
+   remove.onclick=()=>deleteHistory(row.id);
+   item.append(open,meta,remove);list.append(item);
+  });
+ }catch(err){$('historyList').textContent='El historial no está disponible en este navegador.'}
+}
+async function restoreHistory(id){
+ const db=await openHistoryDB();
+ const row=await new Promise((resolve,reject)=>{
+  const req=db.transaction(DB_STORE,'readonly').objectStore(DB_STORE).get(id);
+  req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
+ });
+ db.close();if(!row)return;
+ const file=new File([row.blob],row.name,{type:row.type});
+ if(row.kind==='pdf'){await loadPdfFile(file)}else loadImageFile(file);
+}
+async function deleteHistory(id){
+ const db=await openHistoryDB();
+ await new Promise((resolve,reject)=>{
+  const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).delete(id);
+  tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);
+ });
+ db.close();renderHistory();
+}
+$('clearHistory').onclick=async()=>{
+ if(!confirm('¿Borrar todas las partituras guardadas en este dispositivo?'))return;
+ const db=await openHistoryDB();
+ await new Promise((resolve,reject)=>{
+  const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).clear();
+  tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);
+ });
+ db.close();renderHistory();
+};
+async function loadPdfFile(f){
+ try{pdf=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;page=1;scale=1.15;$('filename').textContent=f.name;renderPage()}catch(err){$('status').textContent='No se pudo abrir el PDF. Comprueba que no esté protegido.'}
+}
+function loadImageFile(f){
+ pdf=null;if(photoUrl)URL.revokeObjectURL(photoUrl);photoUrl=URL.createObjectURL(f);
+ $('photo').src=photoUrl;$('photo').onload=()=>loadInk();$('photo').style.display='block';canvas.style.display='none';$('empty').style.display='none';
+ $('filename').textContent=f.name;$('pageinfo').textContent='Imagen';$('prev').disabled=$('next').disabled=true;scale=1;
+}
+
+$('pdfFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;await loadPdfFile(f);await historySave(f,'pdf');e.target.value=''};
+$('imgFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;loadImageFile(f);await historySave(f,'image');e.target.value=''};
+$('prev').onclick=()=>{if(page>1){page--;renderPage()}};$('next').onclick=()=>{if(pdf&&page<pdf.numPages){page++;renderPage()}};
+$('zoomIn').onclick=()=>{if(pdf){scale=Math.min(2.5,scale+.15);renderPage()}else $('photo').style.transform=`scale(${Math.min(2.5,(parseFloat($('photo').dataset.zoom)||1)+.15)})`,$('photo').dataset.zoom=String(Math.min(2.5,(parseFloat($('photo').dataset.zoom)||1)+.15))};
+$('zoomOut').onclick=()=>{if(pdf){scale=Math.max(.5,scale-.15);renderPage()}else{let z=Math.max(.5,(parseFloat($('photo').dataset.zoom)||1)-.15);$('photo').dataset.zoom=z;$('photo').style.transform=`scale(${z})`}};
+$('fullScreen').onclick=()=>{if(document.fullscreenElement)document.exitFullscreen?.();else viewer.requestFullscreen?.();};
+function updateRehearsalBar(){
+ $('rehearsalPlay').textContent=running?'Ⅱ':'▶';
+ $('rehearsalPage').textContent=pdf?`Página ${page} / ${pdf.numPages}`:'Modo ensayo';
+ $('rehearsalPrev').disabled=!!pdf&&page<=1;
+ $('rehearsalNext').disabled=!!pdf&&page>=pdf.numPages;
+}
+async function enterRehearsal(){if(inkEnabled)setAnnotationMode(false);
+ try{
+  await $('appMain').requestFullscreen();
+  document.body.classList.add('rehearsal-mode');
+  updateRehearsalBar();
+ }catch(e){
+  $('status').textContent='No se pudo activar pantalla completa. Prueba desde Chrome y vuelve a intentarlo.';
+ }
+}
+$('rehearsalBtn').onclick=enterRehearsal;
+$('rehearsalExit').onclick=()=>{if(document.fullscreenElement)document.exitFullscreen?.();};
+$('rehearsalPrev').onclick=()=>{if(pdf&&page>1){page--;renderPage();updateRehearsalBar();}};
+$('rehearsalNext').onclick=()=>{if(pdf&&page<pdf.numPages){page++;renderPage();updateRehearsalBar();}};
+$('rehearsalPlay').onclick=()=>$('toggle').click();
+document.addEventListener('fullscreenchange',()=>{
+ const active=document.fullscreenElement===$('appMain');
+ document.body.classList.toggle('rehearsal-mode',active);
+ if(active)updateRehearsalBar();
+});
+
+let touchX=0,touchY=0;
+viewer.addEventListener('touchstart',e=>{if(e.touches.length===1){touchX=e.touches[0].clientX;touchY=e.touches[0].clientY}},{passive:true});
+viewer.addEventListener('touchend',e=>{if(e.changedTouches.length!==1||!pdf)return;const dx=e.changedTouches[0].clientX-touchX,dy=e.changedTouches[0].clientY-touchY;if(Math.abs(dx)>55&&Math.abs(dx)>Math.abs(dy)){if(dx<0&&page<pdf.numPages){page++;renderPage()}else if(dx>0&&page>1){page--;renderPage()}}},{passive:true});
+viewer.addEventListener('click',e=>{if(!pdf||Math.abs(e.clientX-touchX)>30)return;const r=viewer.getBoundingClientRect(),x=e.clientX-r.left;if(x<r.width*.28&&page>1){page--;renderPage()}else if(x>r.width*.72&&page<pdf.numPages){page++;renderPage()}});
+let audio=null,running=false,timer=null,nextTime=0,beat=0,sub=0,visualTimers=[],scheduledSources=[];
+let tapTimes=[], tapIntervals=[], barsElapsed=0;
+function applyBpm(value){
+ const bpm=Math.max(30,Math.min(240,Math.round(value)));
+ $('bpm').value=bpm;$('bpmValue').textContent=String(bpm);
+}
+function median(values){
+ const sorted=[...values].sort((a,b)=>a-b);
+ const mid=Math.floor(sorted.length/2);
+ return sorted.length%2?sorted[mid]:(sorted[mid-1]+sorted[mid])/2;
+}
+$('tapTempo').onclick=()=>{
+ const now=performance.now();
+ const previous=tapTimes.length?tapTimes[tapTimes.length-1]:null;
+ if(previous!==null && now-previous>2200){
+  tapTimes=[];tapIntervals=[];
+ }
+ if(previous!==null){
+  const interval=now-previous;
+  // Solo acepta pulsaciones dentro del rango de 30–240 BPM.
+  if(interval>=250 && interval<=2000){
+   tapIntervals.push(interval);
+   if(tapIntervals.length>5)tapIntervals.shift();
+  }else if(interval<250){
+   $('tapHint').textContent='Demasiado rápido';
+  }
+ }
+ tapTimes.push(now);
+ if(tapTimes.length>6)tapTimes.shift();
+
+ if(tapIntervals.length>=3){
+  const center=median(tapIntervals);
+  // Descarta golpes aislados que se alejen más de un 20% de la cadencia central.
+  const consistent=tapIntervals.filter(value=>Math.abs(value-center)<=center*0.20);
+  if(consistent.length>=2){
+   const stableInterval=median(consistent);
+   applyBpm(60000/stableInterval);
+   $('tapHint').textContent=$('bpm').value+' BPM';
+  }else{
+   $('tapHint').textContent='Sigue marcando el pulso…';
+  }
+ }else{
+  $('tapHint').textContent=`Calculando ${tapIntervals.length}/3`;
+ }
+};
+
+function getMeter(){const v=$('meter').value;if(v.endsWith('e'))return Number(v.slice(0,-1))/3;return Number(v)}
+function drawDots(){const n=getMeter();$('dots').innerHTML='';for(let i=0;i<n;i++){const d=document.createElement('i');$('dots').appendChild(d)}}
+function flashVisual(isBeat,isAccent,index,eventBeat){
+ const play=$('toggle');
+ play.classList.remove('pulse');void play.offsetWidth;play.classList.add('pulse');
+ const bars=[...$('metroBeat').children];
+ bars.forEach((bar,i)=>bar.classList.toggle('active',i===index%bars.length));
+ if(isAccent)bars[0].classList.add('accent');
+ [...$('dots').children].forEach((d,i)=>d.classList.toggle('current',i===eventBeat));
+ const strips=[$('leftStrip'),$('rightStrip')];
+ strips.forEach(strip=>{
+  strip.classList.remove('flash','subflash');void strip.offsetWidth;
+  strip.classList.add(isBeat?'flash':'subflash');
+  setTimeout(()=>strip.classList.remove('flash','subflash'),isBeat?150:85);
+ });
+ setTimeout(()=>play.classList.remove('pulse'),isAccent?190:120);
+
+}
+function schedule(){
+ if(!running||!audio)return;
+ const now=audio.currentTime;
+ while(nextTime<now+.12){
+  const bpm=Number($('bpm').value),subdiv=Number($('subdivision').value);
+  const beatDur=60/bpm,subDur=beatDur/subdiv;
+  const eventBeat=beat,eventSub=sub;
+  const isBeat=eventSub===0;
+  const isAccent=isBeat&&eventBeat===0&&$('accent').checked;
+  const mode=$('metroMode').value;
+  if(mode!=='visual'){
+   const osc=audio.createOscillator(),gain=audio.createGain();
+   osc.type='sine';
+   osc.frequency.setValueAtTime(isAccent?1450:(isBeat?1050:760),nextTime);
+   gain.gain.setValueAtTime(.0001,nextTime);
+   gain.gain.linearRampToValueAtTime(isAccent?.30:(isBeat?.20:.11),nextTime+.004);
+   gain.gain.exponentialRampToValueAtTime(.0001,nextTime+.065);
+   osc.connect(gain);gain.connect(audio.destination);
+   osc.start(nextTime);osc.stop(nextTime+.07);
+   scheduledSources.push(osc);
+  }
+  if(mode!=='sound'){
+   const delay=Math.max(0,(nextTime-now)*1000);
+   const t=setTimeout(()=>flashVisual(isBeat,isAccent,eventSub,eventBeat),delay);
+   visualTimers.push(t);
+  }
+  nextTime+=subDur;
+  sub++;
+  if(sub>=subdiv){
+   sub=0;beat=(beat+1)%getMeter();
+   if(beat===0){
+    barsElapsed++;
+    $('progressCount').textContent=String(barsElapsed);
+    if($('progressEnabled').checked && barsElapsed%Number($('progressBars').value)===0){
+     const current=Number($('bpm').value);
+     const target=Math.max(30,Math.min(240,Number($('progressTarget').value)||240));
+     if(current<target)applyBpm(Math.min(target,current+Number($('progressStep').value)));
+     if(Number($('bpm').value)>=target)$('status').textContent='Has alcanzado la velocidad máxima configurada.';
+    }
+   }
+  }
+ }
+ timer=setTimeout(schedule,20);
+}
+async function start(){
+ try{const AC=window.AudioContext||window.webkitAudioContext;if(!AC)throw Error('Audio no compatible');if(!audio)audio=new AC();await audio.resume();if(audio.state!=='running')throw Error('Audio bloqueado por el navegador');
+ running=true;beat=0;sub=0;barsElapsed=0;$('progressCount').textContent='0';nextTime=audio.currentTime+.05;$('toggle').textContent='Ⅱ';$('toggle').setAttribute('aria-label','Detener metrónomo');$('status').textContent='Metrónomo activo.';schedule()
+ }catch(e){$('status').textContent='No se pudo activar el audio. Pulsa Iniciar de nuevo y comprueba el volumen multimedia.'}
+}
+function stop(resetPhase=false){
+ running=false;
+ if(timer)clearTimeout(timer);
+ visualTimers.forEach(clearTimeout);visualTimers=[];
+ timer=null;
+ scheduledSources.forEach(source=>{try{source.stop()}catch(e){}});
+ scheduledSources=[];
+ $('toggle').textContent='▶';$('toggle').setAttribute('aria-label','Iniciar metrónomo');
+ $('metroBeat').querySelectorAll('i').forEach(b=>b.classList.remove('active','accent'));
+ [...$('dots').children].forEach(d=>d.classList.remove('current'));
+ if(resetPhase){beat=0;sub=0;}
+}
+$('toggle').onclick=()=>{if(running)stop();else start();setTimeout(updateRehearsalBar,0);};
+$('metroMode').onchange=()=>{
+ const wasRunning=running;
+ if(wasRunning){stop(true);start();}
+ $('status').textContent=$('metroMode').value==='sound'?'Modo solo sonido.':$('metroMode').value==='visual'?'Modo solo indicador visual.':'Modo sonido e indicador visual.';
+};
+function updateBpm(){ $('bpmValue').textContent=$('bpm').value }
+$('bpm').oninput=updateBpm;$('minus').onclick=()=>{$('bpm').value=Math.max(30,Number($('bpm').value)-5);updateBpm()};$('plus').onclick=()=>{$('bpm').value=Math.min(240,Number($('bpm').value)+5);updateBpm()};
+$('meter').onchange=()=>{
+ const wasRunning=running;
+ if(wasRunning)stop(true);else{beat=0;sub=0;}barsElapsed=0;$('progressCount').textContent='0';
+ drawDots();
+ if(wasRunning)start();
+};
+// Afinador cromático mediante micrófono y análisis de frecuencia.
+let tunerStream=null,tunerContext=null,tunerAnalyser=null,tunerSource=null,tunerFrame=0,tunerBuffer=null;
+const tunerNames=['Do','Do♯','Re','Re♯','Mi','Fa','Fa♯','Sol','Sol♯','La','La♯','Si'];
+function stopTuner(){
+ if(tunerFrame)cancelAnimationFrame(tunerFrame);
+ tunerFrame=0;
+ if(tunerSource){try{tunerSource.disconnect()}catch(e){} tunerSource=null;}
+ if(tunerStream){tunerStream.getTracks().forEach(track=>track.stop());tunerStream=null;}
+ if(tunerContext){tunerContext.close().catch(()=>{});tunerContext=null;}
+ tunerAnalyser=null;
+ $('tunerToggle').textContent='🎙 Activar afinador';
+ $('tunerNote').textContent='—';$('tunerFrequency').textContent='— Hz';
+ $('tunerOctave').textContent='Escuchando…';$('tunerCents').textContent='Centra la aguja para afinar';
+ $('tunerNeedle').style.left='50%';
+ $('tunerHint').textContent='Afinador apagado.';
+}
+function detectPitch(buffer,sampleRate){
+ let rms=0;
+ for(let i=0;i<buffer.length;i++)rms+=buffer[i]*buffer[i];
+ rms=Math.sqrt(rms/buffer.length);
+ if(rms<0.012)return null;
+ const minLag=Math.floor(sampleRate/1000),maxLag=Math.min(Math.floor(sampleRate/65),buffer.length-2);
+ let bestLag=-1,bestCorr=0;
+ // Autocorrelación normalizada: busca el periodo más parecido.
+ for(let lag=minLag;lag<=maxLag;lag++){
+  let corr=0,energyA=0,energyB=0;
+  const limit=buffer.length-lag;
+  for(let i=0;i<limit;i+=2){
+   const a=buffer[i],b=buffer[i+lag];
+   corr+=a*b;energyA+=a*a;energyB+=b*b;
+  }
+  const norm=corr/Math.sqrt((energyA*energyB)||1);
+  if(norm>bestCorr){bestCorr=norm;bestLag=lag;}
+ }
+ if(bestLag<0||bestCorr<0.78)return null;
+ // Interpolación parabólica para afinar la estimación del periodo.
+ const correlationAt=lag=>{
+  let c=0,a2=0,b2=0;
+  for(let i=0;i<buffer.length-lag;i+=2){const a=buffer[i],b=buffer[i+lag];c+=a*b;a2+=a*a;b2+=b*b;}
+  return c/Math.sqrt((a2*b2)||1);
+ };
+ const left=bestLag>minLag?correlationAt(bestLag-1):bestCorr;
+ const right=bestLag<maxLag?correlationAt(bestLag+1):bestCorr;
+ const denom=left-2*bestCorr+right;
+ const shift=Math.abs(denom)>1e-8?0.5*(left-right)/denom:0;
+ const period=bestLag+Math.max(-0.5,Math.min(0.5,shift));
+ return {frequency:sampleRate/period,confidence:bestCorr};
+}
+function updateTuner(){
+ if(!tunerAnalyser||!tunerBuffer)return;
+ tunerAnalyser.getFloatTimeDomainData(tunerBuffer);
+ const result=detectPitch(tunerBuffer,tunerContext.sampleRate);
+ if(result){
+  const midi=69+12*Math.log2(result.frequency/440);
+  const nearest=Math.round(midi),cents=Math.round((midi-nearest)*100);
+  const noteIndex=((nearest%12)+12)%12,octave=Math.floor(nearest/12)-1;
+  $('tunerNote').textContent=tunerNames[noteIndex];
+  $('tunerFrequency').textContent=result.frequency.toFixed(1)+' Hz';
+  $('tunerOctave').textContent='Octava '+octave;
+  $('tunerCents').textContent=(cents>0?'+':'')+cents+' cents · '+(Math.abs(cents)<=5?'Afinada':cents<0?'Demasiado grave':'Demasiado aguda');
+  $('tunerNeedle').style.left=(50+Math.max(-50,Math.min(50,cents))*0.9)+'%';
+ }else{
+  $('tunerNote').textContent='—';$('tunerFrequency').textContent='— Hz';
+  $('tunerOctave').textContent='Toca una nota sostenida';
+  $('tunerCents').textContent='Esperando una señal clara';
+  $('tunerNeedle').style.left='50%';
+ }
+ tunerFrame=requestAnimationFrame(updateTuner);
+}
+$('tunerToggle').addEventListener('click',async()=>{
+ if(tunerStream){stopTuner();return;}
+ try{
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)throw new Error('El navegador no permite acceder al micrófono. Abre la app desde HTTPS en Chrome.');
+  tunerStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+  const AC=window.AudioContext||window.webkitAudioContext;
+  if(!AC)throw new Error('Este dispositivo no admite el análisis de audio.');
+  tunerContext=new AC();await tunerContext.resume();
+  tunerAnalyser=tunerContext.createAnalyser();tunerAnalyser.fftSize=4096;tunerAnalyser.smoothingTimeConstant=0.15;
+  tunerBuffer=new Float32Array(tunerAnalyser.fftSize);
+  tunerSource=tunerContext.createMediaStreamSource(tunerStream);tunerSource.connect(tunerAnalyser);
+  $('tunerToggle').textContent='■ Apagar afinador';
+  $('tunerHint').textContent='Micrófono activo. Toca una nota individual y mantenla estable.';
+  updateTuner();
+ }catch(err){
+  stopTuner();
+  $('tunerHint').textContent=err&&err.name==='NotAllowedError'?'Permite el acceso al micrófono en los ajustes del navegador.':(err.message||'No se pudo activar el micrófono.');
+ }
+});
+window.addEventListener('pagehide',stopTuner);
+
+
+// Registro local de sesiones de estudio.
+const STUDY_KEY='toledo-estudio-musical-sessions-v1';
+let studyStartedAt=null,studyInterval=null;
+function readStudySessions(){
+ try{const v=JSON.parse(localStorage.getItem(STUDY_KEY)||'[]');return Array.isArray(v)?v:[];}
+ catch(e){return [];}
+}
+function formatStudyTime(ms){
+ const sec=Math.max(0,Math.floor(ms/1000)),h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60),s=sec%60;
+ return [h,m,s].map(n=>String(n).padStart(2,'0')).join(':');
+}
+function updateStudyClock(){if(studyStartedAt)$('studyTimer').textContent=formatStudyTime(Date.now()-studyStartedAt);}
+function renderStudyProgress(){
+ const rows=readStudySessions(),total=rows.reduce((sum,r)=>sum+(Number(r.duration)||0),0),hours=total/3600000;
+ $('studyTotal').textContent=hours<1?Math.round(total/60000)+' min':hours.toFixed(1)+' h';
+ $('studySessions').textContent=String(rows.length);
+ const list=$('studyHistory');list.innerHTML='';
+ if(!rows.length){list.innerHTML='<li>Aún no hay sesiones registradas.</li>';return;}
+ rows.slice(0,12).forEach(r=>{
+  const li=document.createElement('li'),date=new Date(r.date);
+  const dateText=isNaN(date.getTime())?'Fecha desconocida':date.toLocaleString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  const title=(r.piece||'Práctica general').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  li.innerHTML=`<b>${title}</b><br>${dateText} · ${formatStudyTime(r.duration)} · ${r.bpm} BPM`;
+  list.appendChild(li);
+ });
+}
+$('studyStart').addEventListener('click',()=>{
+ if(studyStartedAt)return;
+ studyStartedAt=Date.now();$('studyStart').disabled=true;$('studyStop').disabled=false;$('studyNote').disabled=true;
+ updateStudyClock();studyInterval=setInterval(updateStudyClock,1000);
+});
+$('studyStop').addEventListener('click',()=>{
+ if(!studyStartedAt)return;
+ const duration=Date.now()-studyStartedAt;studyStartedAt=null;clearInterval(studyInterval);studyInterval=null;
+ const rows=readStudySessions();
+ rows.unshift({date:new Date().toISOString(),duration,piece:$('studyNote').value.trim()||$('filename').textContent.replace('Ningún archivo cargado','Práctica general'),bpm:Number($('bpm').value)||80});
+ try{localStorage.setItem(STUDY_KEY,JSON.stringify(rows.slice(0,200)));}
+ catch(e){$('status').textContent='No se pudo guardar el progreso en este dispositivo.';}
+ $('studyTimer').textContent='00:00:00';$('studyStart').disabled=false;$('studyStop').disabled=true;$('studyNote').disabled=false;
+ renderStudyProgress();
+});
+$('studyClear').addEventListener('click',()=>{
+ if(!confirm('¿Borrar todo el historial de estudio?'))return;
+ localStorage.removeItem(STUDY_KEY);renderStudyProgress();
+});
+renderStudyProgress();
+
+drawDots();updateBpm();renderHistory();resizeInkCanvas();
+})();
+</script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js").catch(err => console.warn("No se pudo registrar el modo app:", err)));
+}
+</script>
+</body></html>

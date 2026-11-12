@@ -1,0 +1,10 @@
+ESTUDIO MUSICAL – v15 Ajuste rápido del metrónomo
+
+NOVEDAD:
+- Botones − y + junto al BPM en la barra superior.
+- Cada toque baja o sube 5 BPM.
+- Se respetan los límites de 30 a 240 BPM.
+- Los controles usan la misma lógica que los ajustes del metrónomo.
+- Se mantienen el botón iniciar/parar, afinador, progreso, partituras y anotaciones.
+
+Sube todos los archivos de este ZIP a la raíz del repositorio GitHub Pages, incluida la carpeta icons.

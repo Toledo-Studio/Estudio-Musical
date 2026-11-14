@@ -1,0 +1,9 @@
+VERSIÓN 17 – ZOOM TÁCTIL
+
+Prueba local antes de publicar:
+- Pellizca con dos dedos para ampliar o reducir.
+- Cuando está ampliada, arrastra con un dedo para desplazarte por la partitura.
+- Cuando está al tamaño normal, desliza horizontalmente para cambiar de página.
+- El visor PDF calcula el tamaño de ajuste a la anchura y renderiza la partitura a la escala real seleccionada.
+
+No se ha modificado GitHub.

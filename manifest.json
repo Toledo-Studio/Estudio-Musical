@@ -1,0 +1,17 @@
+{
+  "name": "Estudio Musical",
+  "short_name": "Estudio Musical",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f2f9fa",
+  "theme_color": "#dff2f4",
+  "icons": [
+    {
+      "src": "./app-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
